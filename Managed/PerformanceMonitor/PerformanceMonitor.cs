@@ -35,35 +35,54 @@ namespace HttpModule
 			get { return "PerformanceMonitor"; }
 		}
 
-		public long RequestCounter { get; set; } = 0;
-		public long RequestSizeTally { get; set; } = 0;
-		public long RequestSizeMinimum { get; set; } = -1;
-		public long RequestSizeMaximum { get; set; } = 0;
+		public bool CriticalFailure { get; set; } = false;
+		public long ResponseCounter { get; set; } = 0;
+		public long ResponseSizeTally { get; set; } = 0;
+		public long ResponseSizeMinimum { get; set; } = -1;
+		public long ResponseSizeMaximum { get; set; } = 0;
+
 		public void Dispose() { }
 
 		#region IHttpModule Members
 		// Initialize and register for events
 		public void Init(HttpApplication app)
 		{
-			//app.BeginRequest += (new EventHandler(this.HandleBeginRequest));
-			app.BeginRequest += (s, e) => HandleBeginRequest(new HttpContextWrapper(app.Context));
-			app.EndRequest += (s, e) => HandleEndRequest(new HttpContextWrapper(app.Context));
-			app.PreRequestHandlerExecute += (s, e) => HandlePreRequestHandler(new HttpContextWrapper(app.Context));
-			app.PostRequestHandlerExecute += (s, e) => HandlePostRequestHandler(new HttpContextWrapper(app.Context));
+			try
+			{
+				app.BeginRequest += (s, e) => HandleBeginRequest(new HttpContextWrapper(app.Context));
+				app.EndRequest += (s, e) => HandleEndRequest(new HttpContextWrapper(app.Context));
+				app.PreRequestHandlerExecute += (s, e) => HandlePreRequestHandler(new HttpContextWrapper(app.Context));
+				app.PostRequestHandlerExecute += (s, e) => HandlePostRequestHandler(new HttpContextWrapper(app.Context));
+			}
+			catch (Exception e)
+			{
+				HandleCriticalExceptionGracefully(e);
+			}
 		}
 
 		// Method:		HandleBeginRequest
 		// Description: Handles BeginRequest events to start benchmarking the request time.
-		//private void HandleBeginRequest(Object source, EventArgs args)
 		public void HandleBeginRequest(HttpContextBase context)
 		{
-			// Setup timer for http request, cache it across requests an start it
-			Stopwatch requestTimer = new Stopwatch();
-			context.Items["request_timer"] = requestTimer;
-			requestTimer.Start();
+			// lets be nice and just disable ourselves if unrecoverable exception occurred
+			if (!CriticalFailure)
+			{
+				try
+				{
+					// Setup timer for http request, cache it across requests an start it
+					Stopwatch requestTimer = new Stopwatch();
+					context.Items["request_timer"] = requestTimer;
+					requestTimer.Start();
 
-			// insert http filter to monitor request size
-			context.Response.Filter = new MonitoringFilter(context.Response.Filter);
+					// insert http filter to monitor request size
+					context.Response.Filter = new MonitoringFilter(context.Response.Filter);
+				}
+				catch (Exception e)
+				{
+					// Any exceptions thrown in this block will be critical and unrecoverable
+					HandleCriticalExceptionGracefully(e);
+				}
+			}
 		}
 
 		// Method:		HandleEndRequest
@@ -71,50 +90,62 @@ namespace HttpModule
 		//				and inject benchmark results.
 		public void HandleEndRequest(HttpContextBase context)
 		{
-			// Get and stop request benchmark timer
-			Stopwatch requestTimer = (Stopwatch)context.Items["request_timer"];
-			requestTimer.Stop();
-
-			// Get handler bemchmark timer
-			Stopwatch handlerTimer = (Stopwatch)context.Items["handler_timer"];
-
-			// Count request
-			RequestCounter++;
-
-			// Add current request size to total request size seen
-			RequestSizeTally += context.Response.Filter.Length;
-
-			// Update minimum request size
-			if (context.Response.Filter.Length > 0 && (context.Response.Filter.Length < RequestSizeMinimum || RequestSizeMinimum == -1))
-				RequestSizeMinimum = context.Response.Filter.Length;
-
-			// Update maximum request sie
-			if (context.Response.Filter.Length > RequestSizeMaximum)
-				RequestSizeMaximum = context.Response.Filter.Length;
-
-			// Inject report if this is a text/html response
-			if (context.Response.ContentType == "text/html" && context.Response.StatusCode == 200)
+			// lets be nice and just disable ourselves if unrecoverable exception occurred
+			if (!CriticalFailure)
 			{
-				string result = string.Format("<hr/>Response Size (bytes): current {{{0}}} - minimum {{{1}}} - average {{{2}}} - maximum {{{3}}}",
-					context.Response.Filter.Length, RequestSizeMinimum, RequestSizeTally / RequestCounter,
-					RequestSizeMaximum);
-
-				// inject response size benchmarks
-				context.Response.Write(result);
-
-				// get the request time in seconds
-				double requestSeconds = (double)requestTimer.ElapsedTicks / Stopwatch.Frequency;
-
-				// for some request the handler time is not available
-				result = string.Format("<br>Time: Request {{{0:F6} s}}", requestSeconds);
-				if (handlerTimer != null)
+				try
 				{
-					double handlerSeconds = (double)handlerTimer.ElapsedTicks / Stopwatch.Frequency;
-					result = result + string.Format(" - Handler {{{0:F6} s}}", handlerSeconds);
-				}
+					// Get and stop request benchmark timer
+					Stopwatch requestTimer = (Stopwatch)context.Items["request_timer"];
+					requestTimer.Stop();
 
-				// inject request time benchmarks
-				context.Response.Write(result);
+					// Get handler bemchmark timer
+					Stopwatch handlerTimer = (Stopwatch)context.Items["handler_timer"];
+
+					// Count request
+					ResponseCounter++;
+
+					// Add current request size to total request size seen
+					ResponseSizeTally += context.Response.Filter.Length;
+
+					// Update minimum request size
+					if (context.Response.Filter.Length > 0 && (context.Response.Filter.Length < ResponseSizeMinimum || ResponseSizeMinimum == -1))
+						ResponseSizeMinimum = context.Response.Filter.Length;
+
+					// Update maximum request sie
+					if (context.Response.Filter.Length > ResponseSizeMaximum)
+						ResponseSizeMaximum = context.Response.Filter.Length;
+
+					// Inject report if this is a text/html response
+					if (context.Response.ContentType == "text/html" && context.Response.StatusCode == 200)
+					{
+						string result = string.Format("<hr/>Response Size (bytes): current {{{0}}} - minimum {{{1}}} - average {{{2}}} - maximum {{{3}}}",
+							context.Response.Filter.Length, ResponseSizeMinimum, ResponseSizeTally / ResponseCounter,
+							ResponseSizeMaximum);
+
+						// inject response size benchmarks
+						context.Response.Write(result);
+
+						// get the request time in seconds
+						double requestSeconds = (double)requestTimer.ElapsedTicks / Stopwatch.Frequency;
+
+						// for some request the handler time is not available
+						result = string.Format("<br>Time: Request {{{0:F6} s}}", requestSeconds);
+						if (handlerTimer != null)
+						{
+							double handlerSeconds = (double)handlerTimer.ElapsedTicks / Stopwatch.Frequency;
+							result = result + string.Format(" - Handler {{{0:F6} s}}", handlerSeconds);
+						}
+
+						// inject request time benchmarks
+						context.Response.Write(result);
+					}
+				}
+				catch (Exception e)
+				{
+					// Any exceptions thrown in this block will be critical and unrecoverable
+					HandleCriticalExceptionGracefully(e);
+				}
 			}
 		}
 
@@ -122,21 +153,65 @@ namespace HttpModule
 		// Description: Handles PreRequestHandler events start handler benchmark timer
 		public void HandlePreRequestHandler(HttpContextBase context)
 		{
-			// Setup timer for http handler, cache it across requests an start it
-			Stopwatch httpHandlerTimer = new Stopwatch();
-			context.Items["handler_timer"] = httpHandlerTimer;
-			httpHandlerTimer.Start();
+			// lets be nice and just disable ourselves if unrecoverable exception occurred
+			if (!CriticalFailure)
+			{
+				try
+				{
+					// Setup timer for http handler, cache it across requests an start it
+					Stopwatch httpHandlerTimer = new Stopwatch();
+					context.Items["handler_timer"] = httpHandlerTimer;
+					httpHandlerTimer.Start();
+				}
+				catch (Exception e)
+				{
+					// Any exceptions thrown in this block will be critical and unrecoverable
+					HandleCriticalExceptionGracefully(e);
+				}
+			}
 		}
 
 		// Method:		HandlePostRequestHandler
 		// Description: Handles PostRequestHandler events to finish benchmarking the handler time
 		public void HandlePostRequestHandler(HttpContextBase context)
 		{
-			// Get and stop request timer
-			Stopwatch httpHandlerTimer = (Stopwatch)context.Items["handler_timer"];
-			httpHandlerTimer.Stop();
+			// lets be nice and just disable ourselves if unrecoverable exception occurred
+			if (!CriticalFailure)
+			{
+				try
+				{
+					// Get and stop request timer
+					Stopwatch httpHandlerTimer = (Stopwatch)context.Items["handler_timer"];
+					httpHandlerTimer.Stop();
+				}
+				catch (Exception e)
+				{
+					// Any exceptions thrown in this block will be critical and unrecoverable
+					HandleCriticalExceptionGracefully(e);
+				}
+			}
 		}
 
 		#endregion
+
+		// Method:		HandleCriticalExceptionGracefully
+		// Description: In the case of a critical non recoverable exception we will play nice and catch
+		//				the exception, not rethrow it, log it and disable our code to avoid taking
+		//				down the application or site as presumable we are not critical path.
+		void HandleCriticalExceptionGracefully(Exception e)
+		{
+			string eventLogSource = ".NET Runtime";
+
+			// set to disable our code
+			CriticalFailure = true;
+
+			{
+				// write entry to windows event log
+				EventLog eventLog = new EventLog();
+				eventLog.Source = eventLogSource;
+				EventLog.WriteEntry(eventLogSource, e.ToString(), EventLogEntryType.Error);
+			} // taking the middle ground, if we can't notify someone of a problem then
+			  // we'll the exception be thrown and propated and risk taking everything down
+		}
 	}
 }
