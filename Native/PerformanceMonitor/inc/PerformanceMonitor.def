@@ -1,0 +1,4 @@
+LIBRARY	"PerformanceMonitorHttpModule"
+
+EXPORTS
+    RegisterModule
