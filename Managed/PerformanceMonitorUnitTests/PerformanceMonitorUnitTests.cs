@@ -141,7 +141,6 @@ namespace PerformanceMonitorUnitTests
 
 			// context.Response.Filter.Length tests
 			Assert.IsTrue(context.Response.Filter.Length == 231);
-			Console.WriteLine("ResponseSizeTally: {0}", pm.ResponseSizeTally);
 			Assert.IsTrue(pm.ResponseSizeTally == 115+4);
 			Assert.IsTrue(pm.ResponseSizeMinimum == 4);
 			Assert.IsTrue(pm.ResponseSizeMaximum == 115);
