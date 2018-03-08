@@ -3,7 +3,7 @@
 | Module | Status |
 | ------ | ------ |
 | Managed code HttpModule | [![Build status](https://ci.appveyor.com/api/projects/status/ej31e66aki3uryj6/branch/master?svg=true)](https://ci.appveyor.com/project/ktietjen/performancemonitor/branch/master) |
-| Native code HttpModule | [![Build status](https://ci.appveyor.com/api/projects/status/ej31e66aki3uryj6/branch/master?svg=true)](https://ci.appveyor.com/project/ktietjen/performancemonitor/branch/master) |
+| Native code HttpModule | [![Build status](https://ci.appveyor.com/api/projects/status/80ujpm8pdkh9dsx6/branch/master?svg=true)](https://ci.appveyor.com/project/ktietjen/performancemonitor-v6dts/branch/master) |
 
 The PerformanceMonitor project consists of two seperate IIS HttpModules with generally the same functionality.  One is written in C# and is therefore a managed code HttpModule and the other is written in C++ and is a native code HttpModule. Here is the list of current features of both:
 
@@ -20,9 +20,14 @@ The second major difference is how the IIS/ASP.NET pipeline works a little diffe
 
 The third major difference is more the fact that the native code HttpModule has to deal with more fundamental Windows primatives and so results in more complexity for and in the native code.
 
-## Getting Started
+## Repository structure
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
+The repository is organized like this:
+PerformanceMonitor
+      |
+      |---- Managed (contains the Managed solution and files)
+      |
+      |---- Native (contains the native solution and files)
 
 ### Prerequisites
 
@@ -32,21 +37,19 @@ These instructions will get you a copy of the project up and running on your loc
 
 ### Installing
 
-A step by step series of examples that tell you have to get a development env running
+Copy the repository locally either by downloading or by git.
 
-Say what the step will be
-
-```
-Give the example
-```
-
-And repeat
-
-```
-until finished
-```
-
-End with an example of getting some data out of the system or using it for a little demo
+#### Managed
+Visual Studio:
+1. Open managed solution in "PerformanceMonitor\Managed\PerformanceMonitor.sln"
+2. Select the solution configuration desired Debug|Release
+3. Copy built dll from target directory "PerformanceMonitor\Managed\PerformanceMonitor\bin\<target>"
+  
+#### Native
+Visual Studio:
+1. Open native solution in "PerformanceMonitor\Native\PerformanceMonitor.sln"
+2. Select the solution configuration desired Debug|Release and platform (x64)
+3. Copy built dll from target directory "PerformanceMonitor\Native\PerformanceMonitor\bin\<target>"
 
 ## Running the tests
 
@@ -54,17 +57,21 @@ Unit tests can be executed by Visual Studio or by msbuild.
 * In Visual Studio, you bring up the Test Explorer and click to execute the unit tests.
 * In msbuild when you build the solution the tests will automatically executed.
 
-### Break down into end to end tests
-
-Explain what these tests test and why
-
-```
-Give an example
-```
-
 ## Deployment
 
-Add additional notes about how to deploy this on a live system
+### Native
+Copy native dll to local system deployment directory
+
+Execute the 'install-native.cmd' script passing it the location of the native dll
+
+Example: install-native.cmd "c:\inetpub\bin\PerformanceMonitor.dll"
+
+### Managed
+Copy managed dll to local system deployment directory. Note: this must be the root of the "Default Web Site" in a folder called bin.
+
+Execute the 'install-managed.cmd' script.  The script will add the HttpModule to everything in the "Default Web Site" and any child applications.
+
+Example: install-managed.cmd
 
 ## Built With
 
