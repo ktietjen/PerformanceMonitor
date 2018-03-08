@@ -49,6 +49,16 @@ public:
 		return (double)(_stopTime - _startTime) / _frequency;
 	};
 
+	// Method:		IsRunning
+	// Description:	Returns true if the timer has started
+	inline bool IsRunning()
+	{
+		if ((_startTime != 0) && (_stopTime == 0))
+			return true;
+
+		return false;
+	}
+
 private:
 	// Method:		Frequency
 	// Description: Provides the frequency of the high resolution timer

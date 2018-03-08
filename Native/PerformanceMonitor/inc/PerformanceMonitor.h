@@ -23,7 +23,7 @@
 //				and inject the benchmark report into the response.
 class PerformanceMonitorHttpModule : public CHttpModule
 {
-private:
+public:
 	static HANDLE		g_mutex;		// to protect reading and writing static variables between threads (ie. different http requests/responses)
 	HighResolutionTimer _requestTimer;
 	HighResolutionTimer _handlerTimer;

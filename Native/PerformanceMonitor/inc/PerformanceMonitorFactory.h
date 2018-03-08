@@ -1,5 +1,5 @@
 // File:		PerformanceMonitorFactory.h
-// Description:	Factory class used for creating PerformanceMonitorHttpModule classes.
+// Description:	Factory class used for creating PerformanceMonitorHttpModule class.
 //
 // Copyright (c) 2018 Ken Tietjen. All rights reserved.  
 // Licensed under the MIT License. See LICENSE file in the project root for full license information.  
@@ -11,13 +11,13 @@
 #include <stdio.h>
 
 
-// class PerformanceMonitorHttpModuleFactory
-
-// Factory class for PerformanceMonitorHttpModule.
-// This class is responsible for creating instances of PerformanceMonitorHttpModule for each request.
+// Class:		PerformanceMonitorHttpModuleFactory 
+// Description:	Factory class used for creating PerformanceMonitorHttpModule class.
 class PerformanceMonitorHttpModuleFactory : public IHttpModuleFactory
 {
 	public:
+		PerformanceMonitorHttpModuleFactory() {}
+
 		virtual HRESULT GetHttpModule( OUT CHttpModule **ppModule, IN IModuleAllocator *)
 		{
 			HRESULT hr = S_OK;
