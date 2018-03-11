@@ -25,6 +25,7 @@ class PerformanceMonitorHttpModule : public CHttpModule
 {
 public:
 	static HANDLE		g_mutex;		// to protect reading and writing static variables between threads (ie. different http requests/responses)
+
 	HighResolutionTimer _requestTimer;
 	HighResolutionTimer _handlerTimer;
 
@@ -39,8 +40,9 @@ public:
 	bool				_endRequestCalled = false;
 	bool				_sendResponseCalled = false;
 
-	// Constructor
+
 public:
+	// Constructor
 	PerformanceMonitorHttpModule()
 	{}
 
