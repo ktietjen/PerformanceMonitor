@@ -119,40 +119,48 @@ REQUEST_NOTIFICATION_STATUS PerformanceMonitorHttpModule::OnSendResponse(IN IHtt
 	// used to signal OnEndRequest that we have seen the OnSendResponse event
 	_sendResponseCalled = true;
 
-	HTTP_RESPONSE* pHttpRawResponse = pHttpContext->GetResponse()->GetRawHttpResponse();
-
-	// Count the http response status line by recreating it
-	const char* httpResponseFormat = "HTTP/%d.%d %d ";
-	char httpResponseBuffer[26];
-
-	_snprintf(httpResponseBuffer, 25, httpResponseFormat, pHttpRawResponse->Version.MajorVersion, pHttpRawResponse->Version.MinorVersion,
-		pHttpRawResponse->StatusCode);
-	httpResponseBuffer[25] = 0; // force terminate string
-
-	_responseSize = strnlen(httpResponseBuffer, 25) + pHttpRawResponse->ReasonLength + 2; // add chars /r, /n
-
-	// add the headers
-	_responseSize += GetHeaderSize(pHttpRawResponse->Headers);
-
-	// add the body
-	for (int index = 0; index < pHttpRawResponse->EntityChunkCount; index++)
+	if (pHttpContext != NULL)
 	{
-		_responseSize += GetChunkSize(pHttpRawResponse->pEntityChunks[index]);
-	}
+		HTTP_RESPONSE* pHttpRawResponse = pHttpContext->GetResponse()->GetRawHttpResponse();
 
-	// SendResponse is non-deterministic and we use it to calculate response size. We need to wait until both EndRequest and SendResponse events are called.
-	// If EndRequest has not been called, we will wait until it has been called and then update and write out the benchmarks.
-	// We don't know if another SendResponse will be called so we will update and write out the benchmarks when we are guaranteed to be called which is when.
-	// EndRequest is called. This means that the response size maybe inaccurate.
-	if (_endRequestCalled)
-	{
-		// guard against multi-threaded updates to static variables
+		if (pHttpContext != NULL)
 		{
-			WaitForSingleObject(g_mutex, INFINITE);
+			// Count the http response status line by recreating it
+			const char* httpResponseFormat = "HTTP/%d.%d %d ";
+			char httpResponseBuffer[25];
 
-			WriteBenchmarksToResponse(pHttpContext);
+			_snprintf_s(httpResponseBuffer, 25, _TRUNCATE, httpResponseFormat, pHttpRawResponse->Version.MajorVersion, pHttpRawResponse->Version.MinorVersion,
+				pHttpRawResponse->StatusCode);
 
-			ReleaseMutex(g_mutex);
+			_responseSize = strnlen(httpResponseBuffer, 25) + pHttpRawResponse->ReasonLength + 2; // add chars /r, /n
+
+			// add the headers
+			_responseSize += GetHeaderSize(pHttpRawResponse->Headers);
+
+			// add the body
+			if (pHttpRawResponse->pEntityChunks != NULL)
+			{
+				for (int index = 0; index < pHttpRawResponse->EntityChunkCount; index++)
+				{
+					_responseSize += GetChunkSize(pHttpRawResponse->pEntityChunks[index]);
+				}
+			}
+		}
+
+		// SendResponse is non-deterministic and we use it to calculate response size. We need to wait until both EndRequest and SendResponse events are called.
+		// If EndRequest has not been called, we will wait until it has been called and then update and write out the benchmarks.
+		// We don't know if another SendResponse will be called so we will update and write out the benchmarks when we are guaranteed to be called which is when.
+		// EndRequest is called. This means that the response size maybe inaccurate.
+		if (_endRequestCalled)
+		{
+			// guard against multi-threaded updates to static variables
+			{
+				WaitForSingleObject(g_mutex, INFINITE);
+
+				WriteBenchmarksToResponse(pHttpContext);
+
+				ReleaseMutex(g_mutex);
+			}
 		}
 	}
 
@@ -168,9 +176,12 @@ long long PerformanceMonitorHttpModule::GetHeaderSize(HTTP_RESPONSE_HEADERS head
 	PCSTR headerName;
 
 	// add the accumulative sizes of the unknown type headers
-	for (int index = 0; index <= headers.UnknownHeaderCount; index++)
+	if (headers.pUnknownHeaders != NULL)
 	{
-		size += headers.pUnknownHeaders[index].NameLength + headers.pUnknownHeaders[index].RawValueLength + 4; // add the :, space, /n,/r chars
+		for (int index = 0; index <= headers.UnknownHeaderCount; index++)
+		{
+			size += headers.pUnknownHeaders[index].NameLength + headers.pUnknownHeaders[index].RawValueLength + 4; // add the :, space, /n,/r chars
+		}
 	}
 
 	// add the accumuative sizes of the known type headers
@@ -294,31 +305,34 @@ void PerformanceMonitorHttpModule::UpdateRequestSizeBenchmarks()
 //		 which produces invalid html, but browsers are forgiving :-)
 void PerformanceMonitorHttpModule::WriteBenchmarksToResponse(IN IHttpContext * pHttpContext)
 {
-	// Update benchmarks in preparation to write the report
-	UpdateRequestSizeBenchmarks();
-
 	if (pHttpContext != NULL)
 	{
-		IHttpResponse* response = pHttpContext->GetResponse();
+		// Update benchmarks in preparation to write the report
+		UpdateRequestSizeBenchmarks();
 
-		if (response != NULL)
+		if (pHttpContext != NULL)
 		{
-			USHORT	headerLength;
-			PCSTR	contentTypeHeader = response->GetHeader(HttpHeaderContentType, &headerLength);
+			IHttpResponse* response = pHttpContext->GetResponse();
 
-			// only write the benchmarks if the response type is text/html
-			if (contentTypeHeader != NULL && headerLength >= 9 && (strncmp("text/html", contentTypeHeader, 9) == 0))
+			if (response != NULL)
 			{
-				HTTP_DATA_CHUNK* pChunk = (HTTP_DATA_CHUNK*)pHttpContext->AllocateRequestMemory(sizeof(HTTP_DATA_CHUNK));
-				if (pChunk != NULL)
-				{
-					pChunk->DataChunkType = HttpDataChunkFromMemory;
-					pChunk->FromMemory.pBuffer = pHttpContext->AllocateRequestMemory(512);
-					pChunk->FromMemory.BufferLength = _snprintf((char* const)pChunk->FromMemory.pBuffer, 512, _benchmarkReportFormat,
-						_responseSize, g_minimumResponseSize, (g_totalResponseSize / g_responseCount), g_maximumResponseSize,
-						_handlerTimer.ElapsedSeconds(), _requestTimer.ElapsedSeconds());
+				USHORT	headerLength;
+				PCSTR	contentTypeHeader = response->GetHeader(HttpHeaderContentType, &headerLength);
 
-					response->WriteEntityChunkByReference(pChunk, -1);
+				// only write the benchmarks if the response type is text/html
+				if (contentTypeHeader != NULL && headerLength >= 9 && (strncmp("text/html", contentTypeHeader, 9) == 0))
+				{
+					HTTP_DATA_CHUNK* pChunk = (HTTP_DATA_CHUNK*)pHttpContext->AllocateRequestMemory(sizeof(HTTP_DATA_CHUNK));
+					if (pChunk != NULL)
+					{
+						pChunk->DataChunkType = HttpDataChunkFromMemory;
+						pChunk->FromMemory.pBuffer = pHttpContext->AllocateRequestMemory(512);
+						pChunk->FromMemory.BufferLength = _snprintf_s((char* const)pChunk->FromMemory.pBuffer, 512, _TRUNCATE, _benchmarkReportFormat,
+							_responseSize, g_minimumResponseSize, (g_totalResponseSize / g_responseCount), g_maximumResponseSize,
+							_handlerTimer.ElapsedSeconds(), _requestTimer.ElapsedSeconds());
+
+						response->WriteEntityChunkByReference(pChunk, -1);
+					}
 				}
 			}
 		}
