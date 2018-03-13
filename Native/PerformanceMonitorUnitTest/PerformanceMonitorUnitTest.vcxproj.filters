@@ -24,6 +24,12 @@
     <ClInclude Include="MockHttpContext.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="MockHttpRequest.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MockHttpResponse.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -36,6 +42,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MockHttpContext.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MockHttpRequest.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MockHttpResponse.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

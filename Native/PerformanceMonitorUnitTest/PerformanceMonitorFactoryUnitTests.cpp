@@ -16,7 +16,8 @@ namespace PerformanceMonitorUnitTest
 	{
 	public:
 
-
+		// Method:		FactoryTestMethod
+		// Description: Tests HttpModule factory
 		TEST_METHOD(FactoryTestMethod)
 		{
 			HRESULT hr;

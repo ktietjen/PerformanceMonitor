@@ -176,7 +176,7 @@ long long PerformanceMonitorHttpModule::GetHeaderSize(HTTP_RESPONSE_HEADERS head
 	PCSTR headerName;
 
 	// add the accumulative sizes of the unknown type headers
-	if (headers.pUnknownHeaders != NULL)
+	if ((headers.UnknownHeaderCount > 0) && (headers.pUnknownHeaders != NULL))
 	{
 		for (int index = 0; index <= headers.UnknownHeaderCount; index++)
 		{

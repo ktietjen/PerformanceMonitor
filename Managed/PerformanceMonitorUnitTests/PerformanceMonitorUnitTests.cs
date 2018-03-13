@@ -52,6 +52,8 @@ namespace PerformanceMonitorUnitTests
 	{
 		#region HandleBeginRequest_Tests
 
+		// Method:		HandleBeginRequest_Stopwatch_Tests
+		// Description: Tests HandleBeginRequest Stopwatch operations
 		[TestMethod]
 		public void HandleBeginRequest_Stopwatch_Tests()
 		{
@@ -64,6 +66,8 @@ namespace PerformanceMonitorUnitTests
 			Pre_Stopwatch_Tests(context, "request_timer");
 		}
 
+		// Method:		HandleBeginRequest_HttpFilter_Tests
+		// Description: Tests HandleBeginRequest HttpFilter operations
 		[TestMethod]
 		public void HandleBeginRequest_HttpFilter_Tests()
 		{
@@ -77,6 +81,8 @@ namespace PerformanceMonitorUnitTests
 			Assert.IsTrue(context.Response.Filter.GetType() == typeof(MonitoringFilter));
 		}
 
+		// Method:		HandleBeginRequest_CriticalException_Tests
+		// Description: Tests HandleBeginRequest critical failure states
 		[TestMethod]
 		public void HandleBeginRequest_CriticalException_Tests()
 		{
@@ -92,6 +98,8 @@ namespace PerformanceMonitorUnitTests
 
 		#region HandleEndRequest_Tests
 
+		// Method:		HandleEndRequest_Stopwatch_Tests
+		// Description: Tests HandleEndRequest Stopwatch operations
 		[TestMethod]
 		public void HandleEndRequest_Stopwatch_Tests()
 		{
@@ -105,6 +113,8 @@ namespace PerformanceMonitorUnitTests
 			Post_Stopwatch_Tests(context, "request_timer");
 		}
 
+		// Method:		HandleEndRequest_ResponseCounters_Tests
+		// Description: Tests HandleEndRequest response size operations
 		[TestMethod]
 		public void HandleEndRequest_ResponseCounters_Tests()
 		{
@@ -146,6 +156,8 @@ namespace PerformanceMonitorUnitTests
 			Assert.IsTrue(pm.ResponseSizeMaximum == 115);
 		}
 
+		// Method:		HandleEndRequest_CriticalException_Tests
+		// Description: Tests HandleEndRequest critical failures
 		[TestMethod]
 		public void HandleEndRequest_CriticalException_Tests()
 		{
@@ -161,6 +173,8 @@ namespace PerformanceMonitorUnitTests
 
 		#region HandlePreRequestHandler
 
+		// Method:		HandlePreRequestHandler_Stopwatch_Tests
+		// Description: Tests HandlePreRequestHandler Stopwatch operations
 		[TestMethod]
 		public void HandlePreRequestHandler_Stopwatch_Tests()
 		{
@@ -173,6 +187,8 @@ namespace PerformanceMonitorUnitTests
 			Pre_Stopwatch_Tests(context, "handler_timer");
 		}
 
+		// Method:		HandlePreRequestHandler_CriticalException_Tests
+		// Description: Tests HandlePreRequestHandler critical failures
 		[TestMethod]
 		public void HandlePreRequestHandler_CriticalException_Tests()
 		{
@@ -188,6 +204,8 @@ namespace PerformanceMonitorUnitTests
 
 		#region HandlePostRequestHandler_Tests
 
+		// Method:		HandlePostRequestHandler_Stopwatch_Tests
+		// Description: Tests HandlePostRequestHandler Stopwatch operations
 		[TestMethod]
 		public void HandlePostRequestHandler_Stopwatch_Tests()
 		{
@@ -201,6 +219,8 @@ namespace PerformanceMonitorUnitTests
 			Post_Stopwatch_Tests(context, "handler_timer");
 		}
 
+		// Method:		HandlePostRequestHandler_CriticalException_Tests
+		// Description: Tests HandlePostRequestHandler critical failures
 		[TestMethod]
 		public void HandlePostRequestHandler_CriticalException_Tests()
 		{
@@ -214,6 +234,8 @@ namespace PerformanceMonitorUnitTests
 
 		#endregion
 
+		// Method:		Pre_Stopwatch_Tests
+		// Description: Tests common pre Stopwatch operations
 		private void Pre_Stopwatch_Tests(HttpContextBase context, string item)
 		{
 			Assert.IsTrue(context.Items.Contains(item));
@@ -228,6 +250,8 @@ namespace PerformanceMonitorUnitTests
 			Assert.IsTrue(Stopwatch.IsHighResolution);
 		}
 
+		// Method:		Post_Stopwatch_Tests
+		// Description: Tests common post Stopwatch operations
 		private void Post_Stopwatch_Tests(HttpContextBase context, string item)
 		{
 			Assert.IsTrue(context.Items.Contains(item));
