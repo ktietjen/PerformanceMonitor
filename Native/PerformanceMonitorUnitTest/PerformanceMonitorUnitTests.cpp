@@ -18,6 +18,8 @@ namespace PerformanceMonitorUnitTest
 	{
 	public:
 
+		// Method:		OnBeginRequestTestMethod
+		// Description: Tests OnBeginRequest
 		TEST_METHOD(OnBeginRequestTestMethod)
 		{
 			HRESULT hr;
@@ -38,7 +40,8 @@ namespace PerformanceMonitorUnitTest
 			Assert::IsTrue(pPerfMonModule->_requestTimer.IsRunning());
 		}
 
-		// Warning: need to implement everything that WriteBenchmarksToResponse depends upon in MockHttpContext
+		// Method:		OnBeginRequestTestMethod
+		// Description: Tests OnBeginRequest
 		TEST_METHOD(OnEndRequestTestMethod)
 		{
 			HRESULT hr;
@@ -68,7 +71,9 @@ namespace PerformanceMonitorUnitTest
 			Assert::IsTrue(pPerfMonModule->g_responseCount == 1);
 		}
 
-		TEST_METHOD(OnPostPreExecuteRequestHandler)
+		// Method:		OnPostPreExecuteRequestHandlerTestMethod
+		// Description: Tests OnPostPreExecuteRequestHandler
+		TEST_METHOD(OnPostPreExecuteRequestHandlerTestMethod)
 		{
 			HRESULT hr;
 			CHttpModule *pModule;
@@ -88,7 +93,9 @@ namespace PerformanceMonitorUnitTest
 			Assert::IsTrue(pPerfMonModule->_handlerTimer.IsRunning());
 		}
 
-			TEST_METHOD(OnExecuteRequestHandler)
+		// Method:		OnExecuteRequestHandlerTestMethod
+		// Description: Tests OnExecuteRequestHandler
+			TEST_METHOD(OnExecuteRequestHandlerTestMethod)
 		{
 			HRESULT hr;
 			CHttpModule *pModule;
@@ -108,8 +115,9 @@ namespace PerformanceMonitorUnitTest
 			Assert::IsTrue(pPerfMonModule->_handlerTimer.IsRunning());
 		}
 
-			
-			TEST_METHOD(OnPostExecuteRequestHandler)
+			// Method:		OnPostExecuteRequestHandlerTestMethod
+			// Description: Tests OnPostExecuteRequestHandler
+			TEST_METHOD(OnPostExecuteRequestHandlerTestMethod)
 			{
 				HRESULT hr;
 				CHttpModule *pModule;
@@ -133,8 +141,9 @@ namespace PerformanceMonitorUnitTest
 				Assert::IsFalse(pPerfMonModule->_handlerTimer.IsRunning());
 			}
 
-			//TODO: Implement MockResponse class && MockHttpContext->AllocateRequestMemory
-			TEST_METHOD(OnSendResponse)
+			// Method:		OnSendResponseTestMethod
+			// Description: Tests OnSendResponse, UpdateRequestSizeBenchmarks and WriteBenchmarksToResponse methods
+			TEST_METHOD(OnSendResponseTestMethod)
 			{
 				HRESULT hr;
 				PerformanceMonitorHttpModuleFactory factory;
@@ -150,8 +159,13 @@ namespace PerformanceMonitorUnitTest
 				pPerfMonModule->OnExecuteRequestHandler(NULL, NULL);
 				pPerfMonModule->OnPostExecuteRequestHandler(NULL, NULL);
 				pPerfMonModule->OnEndRequest((IHttpContext*)&context, NULL);
-				//pPerfMonModule->OnSendResponse((IHttpContext*)&context, NULL);
+				pPerfMonModule->OnSendResponse((IHttpContext*)&context, NULL);
 
+				Assert::IsTrue(pPerfMonModule->_sendResponseCalled);
+				Assert::IsTrue(pPerfMonModule->_responseSize == 41);
+				Assert::IsTrue(pPerfMonModule->g_minimumResponseSize == 41);
+				Assert::IsTrue(pPerfMonModule->g_maximumResponseSize == 41);
+				Assert::IsTrue(pPerfMonModule->g_totalResponseSize == 41);
 			}
 	};
 }

@@ -3,14 +3,25 @@
 
 #include <tchar.h>
 #include <stdio.h>
+#include <list>
 
 #include <sal.h>
 //  IIS7 Server API header file
 #include <httpserv.h>
+#include "MockHttpResponse.h"
 
-class __declspec(uuid("424c1b8c-a1ba-44d7-ac98-9f8f457701a5"))
-MockHttpContext : IHttpContext
+class MockHttpContext : IHttpContext
 {
+private:
+	// shortcut for allocateding memory for mocking AllocateRequestMemory
+	bool _allocatedMemory = true;
+	HTTP_DATA_CHUNK _chunk;
+
+	std::list<void *> _allocation_list;
+
+	// mock HttpResponse
+	MockHttpResponse _response;
+
 public:
 	MockHttpContext();
 	~MockHttpContext();
@@ -57,7 +68,7 @@ public:
 			VOID
 		)
 	{
-		return nullptr;
+		return (IHttpResponse*)&_response;
 	}
 
 	virtual
@@ -195,7 +206,12 @@ public:
 			_In_ DWORD          cbAllocation
 		)
 	{
-		return nullptr;
+		void *pAllocation = malloc((size_t)cbAllocation);
+
+		if (pAllocation != NULL)
+			_allocation_list.push_back(pAllocation);
+
+		return pAllocation;
 	}
 
 	virtual
