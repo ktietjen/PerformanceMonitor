@@ -26,7 +26,7 @@ namespace HttpModule
 	//				corresponding AppDomains.  This can be overcome or at least worked around by marshaling across
 	//				AppDomains, but this comes with a significant performance cost which defeats the purpose of 
 	//				bechmarking software.
-	public class PerformanceMonitor : IHttpModule
+	public sealed class PerformanceMonitor : IHttpModule
 	{
 		public PerformanceMonitor() { }
 
@@ -35,11 +35,14 @@ namespace HttpModule
 			get { return "PerformanceMonitor"; }
 		}
 
+		// lock object for response related static variables
+		static readonly object _response_benchmark_lock = new object();
+		public static long ResponseCounter { get; set; } = 0;
+		public static long ResponseSizeTally { get; set; } = 0;
+		public static long ResponseSizeMinimum { get; set; } = -1;
+		public static long ResponseSizeMaximum { get; set; } = 0;
+
 		public bool CriticalFailure { get; set; } = false;
-		public long ResponseCounter { get; set; } = 0;
-		public long ResponseSizeTally { get; set; } = 0;
-		public long ResponseSizeMinimum { get; set; } = -1;
-		public long ResponseSizeMaximum { get; set; } = 0;
 
 		public void Dispose() { }
 
@@ -102,43 +105,46 @@ namespace HttpModule
 					// Get handler bemchmark timer
 					Stopwatch handlerTimer = (Stopwatch)context.Items["handler_timer"];
 
-					// Count request
-					ResponseCounter++;
-
-					// Add current request size to total request size seen
-					ResponseSizeTally += context.Response.Filter.Length;
-
-					// Update minimum request size
-					if (context.Response.Filter.Length > 0 && (context.Response.Filter.Length < ResponseSizeMinimum || ResponseSizeMinimum == -1))
-						ResponseSizeMinimum = context.Response.Filter.Length;
-
-					// Update maximum request sie
-					if (context.Response.Filter.Length > ResponseSizeMaximum)
-						ResponseSizeMaximum = context.Response.Filter.Length;
-
-					// Inject report if this is a text/html response
-					if (context.Response.ContentType == "text/html" && context.Response.StatusCode == 200)
+					lock (_response_benchmark_lock)
 					{
-						string result = string.Format("<hr/>Response Size (bytes): current {{{0}}} - minimum {{{1}}} - average {{{2}}} - maximum {{{3}}}",
-							context.Response.Filter.Length, ResponseSizeMinimum, ResponseSizeTally / ResponseCounter,
-							ResponseSizeMaximum);
+						// Count request
+						ResponseCounter++;
 
-						// inject response size benchmarks
-						context.Response.Write(result);
+						// Add current request size to total request size seen
+						ResponseSizeTally += context.Response.Filter.Length;
 
-						// get the request time in seconds
-						double requestSeconds = (double)requestTimer.ElapsedTicks / Stopwatch.Frequency;
+						// Update minimum request size
+						if (context.Response.Filter.Length > 0 && (context.Response.Filter.Length < ResponseSizeMinimum || ResponseSizeMinimum == -1))
+							ResponseSizeMinimum = context.Response.Filter.Length;
 
-						// for some request the handler time is not available
-						result = string.Format("<br>Time: Request {{{0:F6} s}}", requestSeconds);
-						if (handlerTimer != null)
+						// Update maximum request sie
+						if (context.Response.Filter.Length > ResponseSizeMaximum)
+							ResponseSizeMaximum = context.Response.Filter.Length;
+
+						// Inject report if this is a text/html response
+						if (context.Response.ContentType == "text/html" && context.Response.StatusCode == 200)
 						{
-							double handlerSeconds = (double)handlerTimer.ElapsedTicks / Stopwatch.Frequency;
-							result = result + string.Format(" - Handler {{{0:F6} s}}", handlerSeconds);
-						}
+							string result = string.Format("<hr/>Response Size (bytes): current {{{0}}} - minimum {{{1}}} - average {{{2}}} - maximum {{{3}}}",
+								context.Response.Filter.Length, ResponseSizeMinimum, ResponseSizeTally / ResponseCounter,
+								ResponseSizeMaximum);
 
-						// inject request time benchmarks
-						context.Response.Write(result);
+							// inject response size benchmarks
+							context.Response.Write(result);
+
+							// get the request time in seconds
+							double requestSeconds = (double)requestTimer.ElapsedTicks / Stopwatch.Frequency;
+
+							// for some request the handler time is not available
+							result = string.Format("<br>Time: Request {{{0:F6} s}}", requestSeconds);
+							if (handlerTimer != null)
+							{
+								double handlerSeconds = (double)handlerTimer.ElapsedTicks / Stopwatch.Frequency;
+								result = result + string.Format(" - Handler {{{0:F6} s}}", handlerSeconds);
+							}
+
+							// inject request time benchmarks
+							context.Response.Write(result);
+						}
 					}
 				}
 				catch (Exception e)

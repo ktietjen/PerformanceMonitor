@@ -129,8 +129,9 @@ REQUEST_NOTIFICATION_STATUS PerformanceMonitorHttpModule::OnSendResponse(IN IHtt
 			const char* httpResponseFormat = "HTTP/%d.%d %d ";
 			char httpResponseBuffer[25];
 
-			_snprintf_s(httpResponseBuffer, 25, _TRUNCATE, httpResponseFormat, pHttpRawResponse->Version.MajorVersion, pHttpRawResponse->Version.MinorVersion,
-				pHttpRawResponse->StatusCode);
+			if (_snprintf_s(httpResponseBuffer, 25, _TRUNCATE, httpResponseFormat, pHttpRawResponse->Version.MajorVersion, pHttpRawResponse->Version.MinorVersion,
+				pHttpRawResponse->StatusCode) < 1)
+				return RQ_NOTIFICATION_CONTINUE; // abort as something has seriously gone wrong
 
 			_responseSize = strnlen(httpResponseBuffer, 25) + pHttpRawResponse->ReasonLength + 2; // add chars /r, /n
 
@@ -331,7 +332,8 @@ void PerformanceMonitorHttpModule::WriteBenchmarksToResponse(IN IHttpContext * p
 							_responseSize, g_minimumResponseSize, (g_totalResponseSize / g_responseCount), g_maximumResponseSize,
 							_handlerTimer.ElapsedSeconds(), _requestTimer.ElapsedSeconds());
 
-						response->WriteEntityChunkByReference(pChunk, -1);
+						if (pChunk->FromMemory.BufferLength > 0) // only write to response if buffer write successful 
+							response->WriteEntityChunkByReference(pChunk, -1);
 					}
 				}
 			}
