@@ -5,7 +5,6 @@
 using System;
 using System.Web;
 using HttpModule;
-using System.Diagnostics;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections;
 using System.Collections.Generic;
@@ -118,6 +117,7 @@ namespace PerformanceMonitorUnitTests
 		[TestMethod]
 		public void HandleEndRequest_ResponseCounters_Tests()
 		{
+            long responseCounter;
 			byte[] buffer = Encoding.ASCII.GetBytes("Test");
 
 			// setup for tests
@@ -125,8 +125,8 @@ namespace PerformanceMonitorUnitTests
 			PerformanceMonitor pm = new PerformanceMonitor();
 			pm.HandleBeginRequest(context);
 
-			// ResponseCounter tests
-			Assert.IsTrue(pm.ResponseCounter == 0);
+            // ResponseCounter tests
+            responseCounter = PerformanceMonitor.ResponseCounter;
 
 			// context.Response.Filter.Length tests
 			Assert.IsTrue(context.Response.Filter.Length == 0);
@@ -137,13 +137,13 @@ namespace PerformanceMonitorUnitTests
 			pm.HandleEndRequest(context);
 
 			// ResponseCounter tests
-			Assert.IsTrue(pm.ResponseCounter == 1);
+			Assert.IsTrue(PerformanceMonitor.ResponseCounter == responseCounter + 1);
 
 			// context.Response.Filter.Length tests
 			Assert.IsTrue(context.Response.Filter.Length == 115);
-			Assert.IsTrue(pm.ResponseSizeTally == 4);
-			Assert.IsTrue(pm.ResponseSizeMinimum == 4);
-			Assert.IsTrue(pm.ResponseSizeMaximum == 4);
+			Assert.IsTrue(PerformanceMonitor.ResponseSizeTally == 4);
+			Assert.IsTrue(PerformanceMonitor.ResponseSizeMinimum == 4);
+			Assert.IsTrue(PerformanceMonitor.ResponseSizeMaximum == 4);
 
 
 			// calling HandleEndRequest for the second time
@@ -151,9 +151,9 @@ namespace PerformanceMonitorUnitTests
 
 			// context.Response.Filter.Length tests
 			Assert.IsTrue(context.Response.Filter.Length == 231);
-			Assert.IsTrue(pm.ResponseSizeTally == 115+4);
-			Assert.IsTrue(pm.ResponseSizeMinimum == 4);
-			Assert.IsTrue(pm.ResponseSizeMaximum == 115);
+			Assert.IsTrue(PerformanceMonitor.ResponseSizeTally == 115+4);
+			Assert.IsTrue(PerformanceMonitor.ResponseSizeMinimum == 4);
+			Assert.IsTrue(PerformanceMonitor.ResponseSizeMaximum == 115);
 		}
 
 		// Method:		HandleEndRequest_CriticalException_Tests
@@ -240,14 +240,14 @@ namespace PerformanceMonitorUnitTests
 		{
 			Assert.IsTrue(context.Items.Contains(item));
 			Assert.IsNotNull(context.Items[item]);
-			Assert.IsTrue(context.Items[item].GetType() == typeof(Stopwatch));
+			Assert.IsTrue(context.Items[item].GetType() == typeof(System.Diagnostics.Stopwatch));
 
-			Stopwatch sw = (Stopwatch)context.Items[item];
+            System.Diagnostics.Stopwatch sw = (System.Diagnostics.Stopwatch)context.Items[item];
 			Assert.IsNotNull(sw);
 			Assert.IsTrue(sw.IsRunning);
 			Assert.IsTrue(sw.ElapsedTicks > 0);
-			Assert.IsTrue(Stopwatch.Frequency > 0);
-			Assert.IsTrue(Stopwatch.IsHighResolution);
+			Assert.IsTrue(System.Diagnostics.Stopwatch.Frequency > 0);
+			Assert.IsTrue(System.Diagnostics.Stopwatch.IsHighResolution);
 		}
 
 		// Method:		Post_Stopwatch_Tests
@@ -256,14 +256,14 @@ namespace PerformanceMonitorUnitTests
 		{
 			Assert.IsTrue(context.Items.Contains(item));
 			Assert.IsNotNull(context.Items[item]);
-			Assert.IsTrue(context.Items[item].GetType() == typeof(Stopwatch));
+			Assert.IsTrue(context.Items[item].GetType() == typeof(System.Diagnostics.Stopwatch));
 
-			Stopwatch sw = (Stopwatch)context.Items[item];
+            System.Diagnostics.Stopwatch sw = (System.Diagnostics.Stopwatch)context.Items[item];
 			Assert.IsNotNull(sw);
 			Assert.IsFalse(sw.IsRunning);
 			Assert.IsTrue(sw.ElapsedTicks > 0);
-			Assert.IsTrue(Stopwatch.Frequency > 0);
-			Assert.IsTrue(Stopwatch.IsHighResolution);
+			Assert.IsTrue(System.Diagnostics.Stopwatch.Frequency > 0);
+			Assert.IsTrue(System.Diagnostics.Stopwatch.IsHighResolution);
 		}
 	}
 }
