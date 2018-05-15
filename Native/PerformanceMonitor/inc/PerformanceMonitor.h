@@ -24,7 +24,8 @@
 class PerformanceMonitorHttpModule : public CHttpModule
 {
 public:
-	static HANDLE		g_mutex;		// to protect reading and writing static variables between threads (ie. different http requests/responses)
+	// to protect reading and writing static variables between threads (ie. different http requests/responses)
+	static CRITICAL_SECTION g_criticalSection;
 
 	HighResolutionTimer _requestTimer;
 	HighResolutionTimer _handlerTimer;
@@ -44,10 +45,14 @@ public:
 public:
 	// Constructor
 	PerformanceMonitorHttpModule()
-	{}
+	{
+		InitializeCriticalSection(&g_criticalSection);
+	}
 
 	~PerformanceMonitorHttpModule()
-	{}
+	{
+		DeleteCriticalSection(&g_criticalSection);
+	}
 
 
 	// CHttpModule methods (events)

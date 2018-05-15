@@ -13,6 +13,7 @@
 
 #include <tchar.h>
 #include <stdio.h>
+#include <atlstr.h>
 
 #include <sal.h>
 //  IIS7 Server API header file

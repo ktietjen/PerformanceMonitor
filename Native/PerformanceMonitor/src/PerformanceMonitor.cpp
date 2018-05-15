@@ -13,7 +13,7 @@
 #include "precomp.h"
 
 // Initialize static member variables
-HANDLE		PerformanceMonitorHttpModule::g_mutex = CreateMutex(NULL, FALSE, NULL);
+CRITICAL_SECTION PerformanceMonitorHttpModule::g_criticalSection;
 long long	PerformanceMonitorHttpModule::g_responseCount = 0;
 long long	PerformanceMonitorHttpModule::g_totalResponseSize = 0;
 long long	PerformanceMonitorHttpModule::g_minimumResponseSize = LLONG_MAX;
@@ -48,7 +48,7 @@ REQUEST_NOTIFICATION_STATUS PerformanceMonitorHttpModule::OnEndRequest(IN IHttpC
 
 	// guard against multi-threaded updates to static variables
 	{
-		WaitForSingleObject(g_mutex, INFINITE);
+		EnterCriticalSection(&g_criticalSection);
 
 		// count this response
 		g_responseCount++;
@@ -61,11 +61,11 @@ REQUEST_NOTIFICATION_STATUS PerformanceMonitorHttpModule::OnEndRequest(IN IHttpC
 		if (_sendResponseCalled)
 			WriteBenchmarksToResponse(pHttpContext);
 
-		ReleaseMutex(g_mutex);
+		LeaveCriticalSection(&g_criticalSection);
 	}
 
 	// Return processing to the pipeline.
-    return RQ_NOTIFICATION_CONTINUE;
+	return RQ_NOTIFICATION_CONTINUE;
 }
 
 // Method:		OnPostPreExecuteRequestHandler
@@ -123,17 +123,14 @@ REQUEST_NOTIFICATION_STATUS PerformanceMonitorHttpModule::OnSendResponse(IN IHtt
 	{
 		HTTP_RESPONSE* pHttpRawResponse = pHttpContext->GetResponse()->GetRawHttpResponse();
 
-		if (pHttpContext != NULL)
+		if (pHttpRawResponse != NULL)
 		{
 			// Count the http response status line by recreating it
-			const char* httpResponseFormat = "HTTP/%d.%d %d ";
-			char httpResponseBuffer[25];
+			CString httpResponseBuffer;
 
-			if (_snprintf_s(httpResponseBuffer, 25, _TRUNCATE, httpResponseFormat, pHttpRawResponse->Version.MajorVersion, pHttpRawResponse->Version.MinorVersion,
-				pHttpRawResponse->StatusCode) < 1)
-				return RQ_NOTIFICATION_CONTINUE; // abort as something has seriously gone wrong
+			httpResponseBuffer.Format(_T("HTTP/%d.%d %d "), pHttpRawResponse->Version.MajorVersion, pHttpRawResponse->Version.MinorVersion, pHttpRawResponse->StatusCode);
 
-			_responseSize = strnlen(httpResponseBuffer, 25) + pHttpRawResponse->ReasonLength + 2; // add chars /r, /n
+			_responseSize = httpResponseBuffer.GetLength() + pHttpRawResponse->ReasonLength + 2;
 
 			// add the headers
 			_responseSize += GetHeaderSize(pHttpRawResponse->Headers);
@@ -156,11 +153,11 @@ REQUEST_NOTIFICATION_STATUS PerformanceMonitorHttpModule::OnSendResponse(IN IHtt
 		{
 			// guard against multi-threaded updates to static variables
 			{
-				WaitForSingleObject(g_mutex, INFINITE);
+				EnterCriticalSection(&g_criticalSection);
 
 				WriteBenchmarksToResponse(pHttpContext);
 
-				ReleaseMutex(g_mutex);
+				LeaveCriticalSection(&g_criticalSection);
 			}
 		}
 	}
@@ -326,14 +323,26 @@ void PerformanceMonitorHttpModule::WriteBenchmarksToResponse(IN IHttpContext * p
 					HTTP_DATA_CHUNK* pChunk = (HTTP_DATA_CHUNK*)pHttpContext->AllocateRequestMemory(sizeof(HTTP_DATA_CHUNK));
 					if (pChunk != NULL)
 					{
-						pChunk->DataChunkType = HttpDataChunkFromMemory;
-						pChunk->FromMemory.pBuffer = pHttpContext->AllocateRequestMemory(512);
-						pChunk->FromMemory.BufferLength = _snprintf_s((char* const)pChunk->FromMemory.pBuffer, 512, _TRUNCATE, _benchmarkReportFormat,
+						CString benchmarkReport;
+						benchmarkReport.Format(_T("<hr / >Response Size(bytes) : current { %lld } - minimum { %lld } - average { %lld } - maximum { %lld }<br>Time: Handler { %4.6f s } - Request { %4.6f s }"),
 							_responseSize, g_minimumResponseSize, (g_totalResponseSize / g_responseCount), g_maximumResponseSize,
 							_handlerTimer.ElapsedSeconds(), _requestTimer.ElapsedSeconds());
 
-						if (pChunk->FromMemory.BufferLength > 0) // only write to response if buffer write successful 
-							response->WriteEntityChunkByReference(pChunk, -1);
+						if (benchmarkReport.GetLength() > 0)
+						{
+							pChunk->DataChunkType = HttpDataChunkFromMemory;
+							pChunk->FromMemory.pBuffer = pHttpContext->AllocateRequestMemory(benchmarkReport.GetLength());
+
+							// only continue if succesful memory allocation
+							if (pChunk->FromMemory.pBuffer)
+							{
+								pChunk->FromMemory.BufferLength = benchmarkReport.GetLength();
+
+								// only write to response if buffer write successful 
+								if (memcpy(pChunk->FromMemory.pBuffer, benchmarkReport, pChunk->FromMemory.BufferLength) == pChunk->FromMemory.pBuffer)
+									response->WriteEntityChunkByReference(pChunk, -1);
+							}
+						}
 					}
 				}
 			}
