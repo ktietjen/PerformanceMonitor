@@ -25,7 +25,7 @@ class PerformanceMonitorHttpModule : public CHttpModule
 {
 public:
 	// to protect reading and writing static variables between threads (ie. different http requests/responses)
-	static CRITICAL_SECTION g_criticalSection;
+	static CComAutoCriticalSection g_criticalSection;
 
 	HighResolutionTimer _requestTimer;
 	HighResolutionTimer _handlerTimer;
@@ -46,12 +46,10 @@ public:
 	// Constructor
 	PerformanceMonitorHttpModule()
 	{
-		InitializeCriticalSection(&g_criticalSection);
 	}
 
 	~PerformanceMonitorHttpModule()
 	{
-		DeleteCriticalSection(&g_criticalSection);
 	}
 
 
