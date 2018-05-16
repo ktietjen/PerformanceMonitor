@@ -12,8 +12,9 @@
 
 #include "precomp.h"
 
+
 // Initialize static member variables
-CRITICAL_SECTION PerformanceMonitorHttpModule::g_criticalSection;
+CComAutoCriticalSection PerformanceMonitorHttpModule::g_criticalSection;
 long long	PerformanceMonitorHttpModule::g_responseCount = 0;
 long long	PerformanceMonitorHttpModule::g_totalResponseSize = 0;
 long long	PerformanceMonitorHttpModule::g_minimumResponseSize = LLONG_MAX;
@@ -48,7 +49,7 @@ REQUEST_NOTIFICATION_STATUS PerformanceMonitorHttpModule::OnEndRequest(IN IHttpC
 
 	// guard against multi-threaded updates to static variables
 	{
-		EnterCriticalSection(&g_criticalSection);
+		CComCritSecLock<CComAutoCriticalSection> lock(g_criticalSection);
 
 		// count this response
 		g_responseCount++;
@@ -60,8 +61,6 @@ REQUEST_NOTIFICATION_STATUS PerformanceMonitorHttpModule::OnEndRequest(IN IHttpC
 		// the response size may be inaccurate.
 		if (_sendResponseCalled)
 			WriteBenchmarksToResponse(pHttpContext);
-
-		LeaveCriticalSection(&g_criticalSection);
 	}
 
 	// Return processing to the pipeline.
@@ -153,11 +152,9 @@ REQUEST_NOTIFICATION_STATUS PerformanceMonitorHttpModule::OnSendResponse(IN IHtt
 		{
 			// guard against multi-threaded updates to static variables
 			{
-				EnterCriticalSection(&g_criticalSection);
+				CComCritSecLock<CComAutoCriticalSection> lock(g_criticalSection);
 
 				WriteBenchmarksToResponse(pHttpContext);
-
-				LeaveCriticalSection(&g_criticalSection);
 			}
 		}
 	}

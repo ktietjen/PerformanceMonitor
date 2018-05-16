@@ -13,6 +13,7 @@
 
 #include <tchar.h>
 #include <stdio.h>
+#include <atlcore.h>
 #include <atlstr.h>
 
 #include <sal.h>
