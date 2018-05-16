@@ -46,12 +46,10 @@ public:
 	// Constructor
 	PerformanceMonitorHttpModule()
 	{
-		InitializeCriticalSection(&g_criticalSection);
 	}
 
 	~PerformanceMonitorHttpModule()
 	{
-		DeleteCriticalSection(&g_criticalSection);
 	}
 
 
